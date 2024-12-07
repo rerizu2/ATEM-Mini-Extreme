@@ -102,6 +102,7 @@
         <option value="4">画面キャプチャ4</option>
         <option value="5">画面キャプチャ5</option>
         <option value="6">画面キャプチャ6</option>
+        <option value="7">画面キャプチャ7</option>
     </select>
     <button id="startScreenCaptureButton">画面キャプチャを開始</button>
     <button id="startCameraButton">カメラを開始</button>
@@ -155,117 +156,43 @@
     </div>
 
     <script>
-        const switchVideo1 = document.getElementById('switchVideo1');
-        const screenCaptureSelect = document.getElementById('screenCaptureSelect');
-        const startScreenCaptureButton = document.getElementById('startScreenCaptureButton');
-        const startCameraButton = document.getElementById('startCameraButton');
+    const videoElements = {
+        1: document.getElementById('captureVideo1'),
+        2: document.getElementById('captureVideo2'),
+        3: document.getElementById('captureVideo3'),
+        4: document.getElementById('captureVideo4'),
+        5: document.getElementById('captureVideo5'),
+        6: document.getElementById('captureVideo6'),
+        camera: document.getElementById('cameraVideo'),
+        usbLeft: document.getElementById('captureVideo6Left'),  // 右下左
+        usbRight: document.getElementById('captureVideo7')      // 右下右
+    };
 
-        const videoElements = {
-            1: document.getElementById('captureVideo1'),
-            2: document.getElementById('captureVideo2'),
-            3: document.getElementById('captureVideo3'),
-            4: document.getElementById('captureVideo4'),
-            5: document.getElementById('captureVideo5'),
-            6: document.getElementById('captureVideo6'),
-            7: document.getElementById('captureVideo7'),
-            camera: document.getElementById('cameraVideo'),
-            capture6Left: document.getElementById('captureVideo6Left'),
-            capture6Right: document.getElementById('captureVideo7')
-        };
+    startScreenCaptureButton.addEventListener('click', () => {
+        const selectedId = screenCaptureSelect.value;
+        const videoElement = videoElements[selectedId];
+        if (!videoElement) {
+            alert(`指定された画面キャプチャ(${selectedId})が見つかりません`);
+            return;
+        }
 
-        startScreenCaptureButton.addEventListener('click', () => {
-            const selectedId = screenCaptureSelect.value;
-            const videoElement = videoElements[selectedId];
-            if (!videoElement) {
-                alert(指定された画面キャプチャ(${selectedId})が見つかりません);
-                return;
-            }
-
-            navigator.mediaDevices.getDisplayMedia({ video: true })
-                .then(stream => {
-                    videoElement.srcObject = stream;
-                })
-                .catch(err => {
-                    console.error(画面キャプチャ${selectedId}の取得に失敗しました:, err);
-                });
-        });
-
-        startCameraButton.addEventListener('click', () => {
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(stream => {
-                    videoElements.camera.srcObject = stream;
-                })
-                .catch(err => {
-                    console.error("カメラの取得に失敗しました:", err);
-                });
-        });
-
-        window.addEventListener('keydown', (event) => {
-            const key = parseInt(event.key, 10);
-
-            if (key >= 1 && key <= 4) {
-                const videoElement = videoElements[key];
-                if (videoElement.srcObject) {
-                    switchVideo1.srcObject = videoElement.srcObject;
-                    console.log(画面1にストリーム${key}を設定しました);
-                } else {
-                    console.warn(ストリーム${key}が存在しません);
+        navigator.mediaDevices.getDisplayMedia({ video: true })
+            .then(stream => {
+                if (selectedId === '5') {
+                    // キャプチャ5をUSB左に割り当て
+                    videoElements.usbLeft.srcObject = stream;
+                    console.log("キャプチャ5をUSB画面左に設定しました");
+                } else if (selectedId === '6') {
+                    // キャプチャ6をUSB右に割り当て
+                    videoElements.usbRight.srcObject = stream;
+                    console.log("キャプチャ6をUSB画面右に設定しました");
                 }
-            } else if (key === 5) {
-                const cameraStream = videoElements.camera.srcObject;
-                if (cameraStream) {
-                    switchVideo1.srcObject = cameraStream;
-                    console.log("画面1にカメラを設定しました");
-                } else {
-                    console.warn("カメラのストリームが存在しません");
-                }
-            } else if (key === 6) {
-                const videoElement = videoElements[5];
-                if (videoElement.srcObject) {
-                    // 画面1にもキャプチャ5を表示
-                    switchVideo1.srcObject = videoElement.srcObject;
-                    console.log("画面1に画面キャプチャ5を設定しました");
-                } else {
-                    console.warn("画面キャプチャ5のストリームが存在しません");
-                }
-
-                // 常に画面4の右上に画面キャプチャ6を表示
-                const capture6 = videoElements[6];
-                const topRight = videoElements[6];
-                if (capture6.srcObject) {
-                    topRight.srcObject = capture6.srcObject;
-                    console.log("画面4の右上に画面キャプチャ6を設定しました");
-                }
-                // 右下の左側に画面キャプチャ6を設定
-                const capture5 = videoElements[5];
-                const bottomRight = videoElements[7];
-                if (capture5.srcObject) {
-                    bottomRight.srcObject = capture5.srcObject;
-                    console.log("画面4の右下に画面キャプチャ5を設定しました");
-                }
-            } else if (key === 7) {
-                const videoElement = videoElements[6];
-                if (videoElement.srcObject) {
-                    videoElements.capture6Left.srcObject = videoElement.srcObject;
-                    console.log("画面4右下左側に画面キャプチャ6を設定しました");
-                } else {
-                    console.warn("画面キャプチャ6のストリームが存在しません");
-                }
-
-                // 画面4右下の右側にキャプチャ7を設定
-                const capture7 = videoElements[7];
-                if (capture7.srcObject) {
-                    videoElements.capture6Right.srcObject = capture7.srcObject;
-                    console.log("画面4右下右側に画面キャプチャ7を設定しました");
-                }
-
-                // 画面1にもキャプチャ7を設定
-                if (capture7.srcObject) {
-                    switchVideo1.srcObject = capture7.srcObject;
-                    console.log("画面1に画面キャプチャ7を設定しました");
-                }
-            }
-        });
-    </script>
+                videoElement.srcObject = stream; // キャプチャ元にもストリームを割り当て
+            })
+            .catch(err => {
+                console.error(`画面キャプチャ${selectedId}の取得に失敗しました:`, err);
+            });
+    });
+</script>
 </body>
 </html>
