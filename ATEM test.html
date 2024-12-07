@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATEM Mini Extreme ISO【統合版】</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            background-color: black;
+            color: white;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            width: 80vw;
+            height: 80vh;
+            border: 2px solid white;
+            position: relative;
+        }
+        .cell {
+            border: 1px solid gray;
+            position: relative;
+            overflow: hidden;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .label {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            color: white;
+            font-size: 20px;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px;
+            border-radius: 5px;
+            z-index: 2;
+        }
+        .horizontal-line, .vertical-line {
+            position: absolute;
+            background-color: white;
+            z-index: 2;
+        }
+        .horizontal-line {
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+        }
+        .vertical-line {
+            top: 0;
+            left: 50%;
+            height: 100%;
+            width: 2px;
+        }
+        .split-area {
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            overflow: hidden;
+        }
+        .split-area.top-left { top: 0; left: 0; }
+        .split-area.bottom-left { bottom: 0; left: 0; }
+        .split-area.top-right { top: 0; right: 0; }
+        .split-area.bottom-right {
+            bottom: 0;
+            right: 0;
+            width: 50%;  /* 右下を50%に */
+            height: 100%; /* 高さを100%に */
+        }
+        .split-area.bottom-right-left {
+            left: 0;
+            width: 50%;  /* 右下領域をさらに半分に */
+            height: 100%;
+        }
+        .split-area.bottom-right-right {
+            right: 0;
+            width: 50%;  /* 右下領域の右側 */
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>デバイス接続</h1>
+    <label for="screenCaptureSelect">画面キャプチャを選択:</label>
+    <select id="screenCaptureSelect">
+        <option value="1">画面キャプチャ1</option>
+        <option value="2">画面キャプチャ2</option>
+        <option value="3">画面キャプチャ3</option>
+        <option value="4">画面キャプチャ4</option>
+        <option value="5">画面キャプチャ5</option>
+        <option value="6">画面キャプチャ6</option>
+    </select>
+    <button id="startScreenCaptureButton">画面キャプチャを開始</button>
+    <button id="startCameraButton">カメラを開始</button>
+
+    <div class="container">
+        <div class="cell">
+            <div class="label"></div>
+            <video id="switchVideo1" autoplay playsinline></video>
+        </div>
+        
+        <div class="cell">
+            <div class="label">画面3</div>
+            <div class="horizontal-line"></div>
+            <div class="vertical-line"></div>
+            <div class="split-area top-left">
+                <video id="captureVideo1" autoplay playsinline></video>
+            </div>
+            <div class="split-area bottom-left">
+                <video id="captureVideo2" autoplay playsinline></video>
+            </div>
+            <div class="split-area top-right">
+                <video id="captureVideo3" autoplay playsinline></video>
+            </div>
+            <div class="split-area bottom-right">
+                <video id="captureVideo4" autoplay playsinline></video>
+            </div>
+        </div>
+
+        <div class="cell">
+            <div class="label">画面4 (キャプチャ＆USB)</div>
+            <div class="horizontal-line"></div>
+            <div class="vertical-line"></div>
+            <div class="split-area top-left">
+                <video id="cameraVideo" autoplay playsinline></video>
+            </div>
+            <div class="split-area bottom-left">
+                <video id="captureVideo5" autoplay playsinline></video>
+            </div>
+            <div class="split-area top-right">
+                <video id="captureVideo6" autoplay playsinline></video>
+            </div>
+            <div class="split-area bottom-right">
+                <div class="split-area bottom-right-left">
+                    <video id="captureVideo6Left" autoplay playsinline></video>
+                </div>
+                <div class="split-area bottom-right-right">
+                    <video id="captureVideo7" autoplay playsinline></video>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const switchVideo1 = document.getElementById('switchVideo1');
+        const screenCaptureSelect = document.getElementById('screenCaptureSelect');
+        const startScreenCaptureButton = document.getElementById('startScreenCaptureButton');
+        const startCameraButton = document.getElementById('startCameraButton');
+
+        const videoElements = {
+            1: document.getElementById('captureVideo1'),
+            2: document.getElementById('captureVideo2'),
+            3: document.getElementById('captureVideo3'),
+            4: document.getElementById('captureVideo4'),
+            5: document.getElementById('captureVideo5'),
+            6: document.getElementById('captureVideo6'),
+            7: document.getElementById('captureVideo7'),
+            camera: document.getElementById('cameraVideo'),
+            capture6Left: document.getElementById('captureVideo6Left'),
+            capture6Right: document.getElementById('captureVideo7')
+        };
+
+        startScreenCaptureButton.addEventListener('click', () => {
+            const selectedId = screenCaptureSelect.value;
+            const videoElement = videoElements[selectedId];
+            if (!videoElement) {
+                alert(指定された画面キャプチャ(${selectedId})が見つかりません);
+                return;
+            }
+
+            navigator.mediaDevices.getDisplayMedia({ video: true })
+                .then(stream => {
+                    videoElement.srcObject = stream;
+                })
+                .catch(err => {
+                    console.error(画面キャプチャ${selectedId}の取得に失敗しました:, err);
+                });
+        });
+
+        startCameraButton.addEventListener('click', () => {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    videoElements.camera.srcObject = stream;
+                })
+                .catch(err => {
+                    console.error("カメラの取得に失敗しました:", err);
+                });
+        });
+
+        window.addEventListener('keydown', (event) => {
+            const key = parseInt(event.key, 10);
+
+            if (key >= 1 && key <= 4) {
+                const videoElement = videoElements[key];
+                if (videoElement.srcObject) {
+                    switchVideo1.srcObject = videoElement.srcObject;
+                    console.log(画面1にストリーム${key}を設定しました);
+                } else {
+                    console.warn(ストリーム${key}が存在しません);
+                }
+            } else if (key === 5) {
+                const cameraStream = videoElements.camera.srcObject;
+                if (cameraStream) {
+                    switchVideo1.srcObject = cameraStream;
+                    console.log("画面1にカメラを設定しました");
+                } else {
+                    console.warn("カメラのストリームが存在しません");
+                }
+            } else if (key === 6) {
+                const videoElement = videoElements[5];
+                if (videoElement.srcObject) {
+                    // 画面1にもキャプチャ5を表示
+                    switchVideo1.srcObject = videoElement.srcObject;
+                    console.log("画面1に画面キャプチャ5を設定しました");
+                } else {
+                    console.warn("画面キャプチャ5のストリームが存在しません");
+                }
+
+                // 常に画面4の右上に画面キャプチャ6を表示
+                const capture6 = videoElements[6];
+                const topRight = videoElements[6];
+                if (capture6.srcObject) {
+                    topRight.srcObject = capture6.srcObject;
+                    console.log("画面4の右上に画面キャプチャ6を設定しました");
+                }
+                // 右下の左側に画面キャプチャ6を設定
+                const capture5 = videoElements[5];
+                const bottomRight = videoElements[7];
+                if (capture5.srcObject) {
+                    bottomRight.srcObject = capture5.srcObject;
+                    console.log("画面4の右下に画面キャプチャ5を設定しました");
+                }
+            } else if (key === 7) {
+                const videoElement = videoElements[6];
+                if (videoElement.srcObject) {
+                    videoElements.capture6Left.srcObject = videoElement.srcObject;
+                    console.log("画面4右下左側に画面キャプチャ6を設定しました");
+                } else {
+                    console.warn("画面キャプチャ6のストリームが存在しません");
+                }
+
+                // 画面4右下の右側にキャプチャ7を設定
+                const capture7 = videoElements[7];
+                if (capture7.srcObject) {
+                    videoElements.capture6Right.srcObject = capture7.srcObject;
+                    console.log("画面4右下右側に画面キャプチャ7を設定しました");
+                }
+
+                // 画面1にもキャプチャ7を設定
+                if (capture7.srcObject) {
+                    switchVideo1.srcObject = capture7.srcObject;
+                    console.log("画面1に画面キャプチャ7を設定しました");
+                }
+            }
+        });
+    </script>
+</body>
+</html>
