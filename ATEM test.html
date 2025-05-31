@@ -83,24 +83,7 @@
     .split-area.top-left { top: 0; left: 0; }
     .split-area.bottom-left { bottom: 0; left: 0; }
     .split-area.top-right { top: 0; right: 0; }
-    .split-area.bottom-right {
-      bottom: 0;
-      right: 0;
-      width: 50%;
-      height: 100%;
-    }
-
-    .split-area.bottom-right-left {
-      left: 0;
-      width: 50%;
-      height: 100%;
-    }
-
-    .split-area.bottom-right-right {
-      right: 0;
-      width: 50%;
-      height: 100%;
-    }
+    .split-area.bottom-right { bottom: 0; right: 0; }
 
     .button-group {
       position: absolute;
@@ -117,7 +100,6 @@
       font-size: 14px;
     }
 
-    /* ▼ アニメーション */
     .fade {
       transition: opacity 0.5s ease;
     }
@@ -171,13 +153,10 @@
       <div class="label">画面4 (キャプチャ＆USB)</div>
       <div class="horizontal-line"></div>
       <div class="vertical-line"></div>
-      <div class="split-area top-left"><video id="cameraVideo" autoplay playsinline></video></div>
-      <div class="split-area bottom-left"><video id="captureVideo5" autoplay playsinline></video></div>
-      <div class="split-area top-right"><video id="captureVideo6" autoplay playsinline></video></div>
-      <div class="split-area bottom-right">
-        <div class="split-area bottom-right-left"><video id="captureVideo6Left" autoplay playsinline></video></div>
-        <div class="split-area bottom-right-right"><video id="captureVideo7" autoplay playsinline></video></div>
-      </div>
+      <div class="split-area top-left"><video id="captureVideo5" autoplay playsinline></video></div>
+      <div class="split-area bottom-left"><video id="captureVideo6" autoplay playsinline></video></div>
+      <div class="split-area top-right"><video id="captureVideo7" autoplay playsinline></video></div>
+      <div class="split-area bottom-right"><video id="cameraVideo" autoplay playsinline></video></div>
       <div class="button-group">
         <button onclick="switchSource(5)">5</button>
         <button onclick="switchSource(6)">6</button>
@@ -186,7 +165,7 @@
       </div>
     </div>
 
-    <!-- 予備枠: サブプレビュー追加 -->
+    <!-- 予備枠 -->
     <div class="cell">
       <div class="label">予備</div>
       <video id="previewVideo" autoplay playsinline muted></video>
@@ -202,9 +181,7 @@
       5: document.getElementById('captureVideo5'),
       6: document.getElementById('captureVideo6'),
       7: document.getElementById('captureVideo7'),
-      camera: document.getElementById('cameraVideo'),
-      usbLeft: document.getElementById('captureVideo6Left'),
-      usbRight: document.getElementById('captureVideo7')
+      camera: document.getElementById('cameraVideo')
     };
 
     const switchVideo = document.getElementById('switchVideo1');
@@ -217,16 +194,13 @@
         return;
       }
 
-      // サブプレビュー表示
       previewVideo.srcObject = sourceVideo.srcObject;
-
-      // アニメーション開始
       switchVideo.classList.add('hidden');
 
       setTimeout(() => {
         switchVideo.srcObject = sourceVideo.srcObject;
         switchVideo.classList.remove('hidden');
-      }, 500); // フェードアウト後に切替
+      }, 500);
     }
 
     startScreenCaptureButton.addEventListener('click', () => {
@@ -239,11 +213,6 @@
 
       navigator.mediaDevices.getDisplayMedia({ video: true })
         .then(stream => {
-          if (selectedId === '5') {
-            videoElements.usbLeft.srcObject = stream;
-          } else if (selectedId === '6') {
-            videoElements.usbRight.srcObject = stream;
-          }
           videoElement.srcObject = stream;
         })
         .catch(err => {
@@ -252,9 +221,10 @@
     });
 
     startCameraButton.addEventListener('click', () => {
+      const videoElement = document.getElementById('cameraVideo');
       navigator.mediaDevices.getUserMedia({ video: true })
         .then(stream => {
-          videoElements.camera.srcObject = stream;
+          videoElement.srcObject = stream;
         })
         .catch(err => {
           console.error("カメラの起動に失敗しました:", err);
