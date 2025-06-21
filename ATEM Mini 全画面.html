@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Fキーでボタン切替＋全画面キャプチャー</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+    }
+
+    video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+    }
+
+    input[type="text"] {
+      position: absolute;
+      top: 30px;
+      left: 30px;
+      font-size: 2rem;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: red;
+      font-weight: bold;
+    }
+
+    #startButton {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 10;
+      padding: 12px 24px;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.8);
+      border: none;
+      cursor: pointer;
+    }
+
+    #instructions {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      font-size: 0.9rem;
+      color: white;
+      opacity: 0.5;
+      z-index: 5;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="container">
+    <video id="screenVideo" autoplay playsinline></video>
+    <input type="text" id="overlayText" placeholder="赤文字を入力" />
+    <button id="startButton" onclick="startCapture()">全画面キャプチャー開始</button>
+    <div id="instructions">Fキーでボタンの表示/非表示切り替え</div>
+  </div>
+
+  <script>
+    async function startCapture() {
+      try {
+        // 全画面モードにする
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+
+        const videoElement = document.getElementById("screenVideo");
+        const mediaStream = await navigator.mediaDevices.getDisplayMedia({
+          video: { mediaSource: "screen" },
+          audio: false
+        });
+        videoElement.srcObject = mediaStream;
+      } catch (err) {
+        alert("画面キャプチャーに失敗しました: " + err);
+      }
+    }
+
+    // Fキーでボタン表示のON/OFF
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "F" || event.key === "f") {
+        const button = document.getElementById("startButton");
+        if (button.style.display === "none") {
+          button.style.display = "block";
+        } else {
+          button.style.display = "none";
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>
