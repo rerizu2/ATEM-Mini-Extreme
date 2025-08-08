@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ドラッグ可能なLIVEパネル</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: black;
+      font-family: sans-serif;
+    }
+
+    #liveControlPanel {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #111;
+      border: 2px solid red;
+      border-radius: 10px;
+      padding: 15px;
+      width: 220px;
+      color: white;
+      box-shadow: 0 0 10px red;
+      z-index: 10000;
+      cursor: move;
+    }
+
+    #liveControlPanel h3 {
+      margin: 0 0 10px;
+      font-size: 20px;
+      color: red;
+      text-align: center;
+      cursor: grab;
+    }
+
+    .label {
+      font-weight: bold;
+    }
+
+    .time {
+      font-size: 18px;
+      color: #0f0;
+      text-align: center;
+    }
+
+    button {
+      margin-top: 6px;
+      padding: 6px 12px;
+      font-size: 14px;
+      border: none;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    #onAirButton {
+      background-color: red;
+    }
+
+    #recButton {
+      background-color: red;
+    }
+
+    #onAirButton.off,
+    #recButton.off {
+      background-color: #333;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="liveControlPanel">
+    <h3 id="dragHandle">ON AIR</h3>
+    <div class="label">配信時間</div>
+    <div class="time" id="onAirTime">00:00:00</div>
+    <div class="label" style="margin-top: 10px;">録画時間</div>
+    <div class="time" id="recTime">00:00:00</div>
+    <button onclick="toggleOnAir()" id="onAirButton">ON AIR</button>
+    <button onclick="toggleRec()" id="recButton">REC</button>
+  </div>
+
+  <script>
+    // ON AIR / REC の状態管理
+    let onAir = false;
+    let rec = false;
+    let onAirStartTime = null;
+    let recStartTime = null;
+
+    function toggleOnAir() {
+      onAir = !onAir;
+      onAirStartTime = onAir ? new Date() : null;
+      const btn = document.getElementById('onAirButton');
+      btn.innerText = onAir ? 'STOP AIR' : 'ON AIR';
+      btn.classList.toggle('off', !onAir);
+    }
+
+    function toggleRec() {
+      rec = !rec;
+      recStartTime = rec ? new Date() : null;
+      const btn = document.getElementById('recButton');
+      btn.innerText = rec ? 'STOP REC' : 'REC';
+      btn.classList.toggle('off', !rec);
+    }
+
+    function updateTimers() {
+      const now = new Date();
+      if (onAir && onAirStartTime) {
+        const diff = new Date(now - onAirStartTime);
+        document.getElementById('onAirTime').innerText = diff.toISOString().substr(11, 8);
+      } else {
+        document.getElementById('onAirTime').innerText = "00:00:00";
+      }
+
+      if (rec && recStartTime) {
+        const diff = new Date(now - recStartTime);
+        document.getElementById('recTime').innerText = diff.toISOString().substr(11, 8);
+      } else {
+        document.getElementById('recTime').innerText = "00:00:00";
+      }
+    }
+
+    setInterval(updateTimers, 1000);
+
+    // ドラッグ機能
+    const panel = document.getElementById("liveControlPanel");
+    const handle = document.getElementById("dragHandle");
+    let offsetX = 0, offsetY = 0, isDragging = false;
+
+    handle.addEventListener("mousedown", (e) => {
+      isDragging = true;
+      offsetX = e.clientX - panel.getBoundingClientRect().left;
+      offsetY = e.clientY - panel.getBoundingClientRect().top;
+      document.body.style.userSelect = "none";
+    });
+
+    document.addEventListener("mouseup", () => {
+      isDragging = false;
+      document.body.style.userSelect = "";
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (isDragging) {
+        panel.style.top = `${e.clientY - offsetY}px`;
+        panel.style.left = `${e.clientX - offsetX}px`;
+        panel.style.bottom = "auto";
+        panel.style.right = "auto";
+      }
+    });
+  </script>
+</body>
+</html>
