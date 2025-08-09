@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ATEM Mini Extreme ISO【統合版】</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
+      background-color: black;
+      color: white;
+      font-family: sans-serif;
+      overflow: hidden;
+    }
+    h1 {
+      margin-top: 10px;
+      animation: fadeIn 1s ease;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      width: 80vw;
+      height: 80vh;
+      border: 2px solid white;
+      position: relative;
+      animation: zoomIn 1s ease;
+    }
+    .cell {
+      border: 1px solid gray;
+      position: relative;
+      overflow: hidden;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+      transition: opacity 0.5s ease;
+    }
+    .label {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      color: white;
+      font-size: 20px;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 5px;
+      border-radius: 5px;
+      z-index: 2;
+    }
+    .horizontal-line, .vertical-line {
+      position: absolute;
+      background-color: white;
+      z-index: 2;
+    }
+    .horizontal-line {
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 2px;
+    }
+    .vertical-line {
+      top: 0;
+      left: 50%;
+      height: 100%;
+      width: 2px;
+    }
+    .split-area {
+      position: absolute;
+      width: 50%;
+      height: 50%;
+      overflow: hidden;
+    }
+    .split-area.top-left { top: 0; left: 0; }
+    .split-area.bottom-left { bottom: 0; left: 0; }
+    .split-area.top-right { top: 0; right: 0; }
+    .split-area.bottom-right { bottom: 0; right: 0; }
+    .button-group {
+      position: absolute;
+      bottom: 5px;
+      left: 5px;
+      z-index: 2;
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      animation: slideUp 1s ease;
+    }
+    .button-group button {
+      padding: 4px 8px;
+      font-size: 14px;
+      transition: transform 0.2s;
+    }
+    .button-group button:hover {
+      transform: scale(1.1);
+      background-color: #444;
+      color: #fff;
+    }
+    .fade {
+      opacity: 1;
+      transition: opacity 0.5s ease;
+    }
+    .hidden {
+      opacity: 0;
+    }
+    /* メニュー用 */
+    #menuToggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      padding: 5px 10px;
+      font-size: 16px;
+      background-color: #222;
+      color: white;
+      border: 1px solid white;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+    #menuToggle:hover {
+      transform: scale(1.2);
+    }
+    #menuPanel {
+      display: none;
+      position: fixed;
+      top: 50px;
+      right: 10px;
+      background-color: rgba(0, 0, 0, 0.95);
+      color: white;
+      padding: 10px;
+      border: 1px solid white;
+      border-radius: 5px;
+      z-index: 1000;
+      animation: fadeInScale 0.4s ease forwards;
+    }
+    #menuPanel ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #menuPanel li {
+      margin-bottom: 8px;
+    }
+    #menuPanel button {
+      width: 100%;
+      padding: 6px;
+      font-size: 14px;
+      background-color: #333;
+      color: white;
+      border: 1px solid #555;
+      border-radius: 4px;
+      transition: background 0.3s, transform 0.2s;
+    }
+    #menuPanel button:hover {
+      background-color: #555;
+      transform: translateX(5px);
+    }
+    /* アニメーション定義 */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes zoomIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    @keyframes fadeInScale {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <h1>デバイス接続</h1>
+  <label for="screenCaptureSelect">画面キャプチャを選択:</label>
+  <select id="screenCaptureSelect">
+    <option value="1">画面キャプチャ1</option>
+    <option value="2">画面キャプチャ2</option>
+    <option value="3">画面キャプチャ3</option>
+    <option value="4">画面キャプチャ4</option>
+    <option value="5">画面キャプチャ5</option>
+    <option value="6">画面キャプチャ6</option>
+    <option value="7">画面キャプチャ7</option>
+  </select>
+  <button id="startScreenCaptureButton">画面キャプチャを開始</button>
+  <button id="startCameraButton">カメラを開始</button>
+
+  <button id="menuToggle">☰ メニュー</button>
+  <div id="menuPanel">
+    <ul>
+      <li><button onclick="goHome()">🏠 ホーム</button></li>
+      <li><button onclick="toggleFullscreen()">🔳 フルスクリーン(Q)</button></li>
+      <li><button onclick="document.getElementById('startCameraButton').click()">📷 カメラ開始</button></li>
+      <li><button onclick="document.getElementById('startScreenCaptureButton').click()">🖥 キャプチャ開始</button></li>
+      <li><button onclick="alert('キー1～8で映像切替、Qで全画面、Wで出力映像全画面')">❓ ヘルプ</button></li>
+      <li><button id="openLiveWindowBtn">🎬 LIVE操作（別ウィンドウ）</button></li>
+    </ul>
+  </div>
+
+  <div class="container">
+    <div class="cell">
+      <div class="label">出力</div>
+      <video id="switchVideo1" autoplay playsinline class="fade"></video>
+    </div>
+    <div class="cell">
+      <div class="label">画面3</div>
+      <div class="horizontal-line"></div>
+      <div class="vertical-line"></div>
+      <div class="split-area top-left"><video id="captureVideo1" autoplay playsinline></video></div>
+      <div class="split-area bottom-left"><video id="captureVideo2" autoplay playsinline></video></div>
+      <div class="split-area top-right"><video id="captureVideo3" autoplay playsinline></video></div>
+      <div class="split-area bottom-right"><video id="captureVideo4" autoplay playsinline></video></div>
+      <div class="button-group">
+        <button onclick="switchSource(1)">1</button>
+        <button onclick="switchSource(2)">2</button>
+        <button onclick="switchSource(3)">3</button>
+        <button onclick="switchSource(4)">4</button>
+      </div>
+    </div>
+    <div class="cell">
+      <div class="label">画面4 (キャプチャ＆USB)</div>
+      <div class="horizontal-line"></div>
+      <div class="vertical-line"></div>
+      <div class="split-area top-left"><video id="captureVideo5" autoplay playsinline></video></div>
+      <div class="split-area bottom-left"><video id="captureVideo6" autoplay playsinline></video></div>
+      <div class="split-area top-right"><video id="captureVideo7" autoplay playsinline></video></div>
+      <div class="split-area bottom-right"><video id="cameraVideo" autoplay playsinline></video></div>
+      <div class="button-group">
+        <button onclick="switchSource(5)">5</button>
+        <button onclick="switchSource(6)">6</button>
+        <button onclick="switchSource(7)">7</button>
+        <button onclick="switchSource('camera')">8</button>
+      </div>
+    </div>
+    <div class="cell">
+      <div class="label">予備</div>
+      <video id="previewVideo" autoplay playsinline muted></video>
+    </div>
+  </div>
+
+  <script>
+    const videoElements = {
+      1: document.getElementById('captureVideo1'),
+      2: document.getElementById('captureVideo2'),
+      3: document.getElementById('captureVideo3'),
+      4: document.getElementById('captureVideo4'),
+      5: document.getElementById('captureVideo5'),
+      6: document.getElementById('captureVideo6'),
+      7: document.getElementById('captureVideo7'),
+      camera: document.getElementById('cameraVideo')
+    };
+    const switchVideo = document.getElementById('switchVideo1');
+    const previewVideo = document.getElementById('previewVideo');
+
+    let currentSourceId = null;
+
+    function generatePassword() {
+      return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+
+    let liveWindow = null;
+    let livePassword = null;
+    let liveAuthorized = false;
+
+    function switchSource(id, fromLiveWindow = false) {
+      const sourceVideo = videoElements[id];
+      if (!sourceVideo || !sourceVideo.srcObject) {
+        alert(`映像ソース${id}が見つからないか、ストリームがありません。`);
+        return;
+      }
+      previewVideo.srcObject = sourceVideo.srcObject;
+
+      switchVideo.classList.add('hidden');
+      setTimeout(() => {
+        switchVideo.srcObject = sourceVideo.srcObject;
+        switchVideo.classList.remove('hidden');
+      }, 500);
+
+      currentSourceId = id;
+
+      if (!fromLiveWindow && liveWindow && !liveWindow.closed) {
+        liveWindow.postMessage({ type: 'sourceChanged', id }, '*');
+      }
+    }
+
+    const startScreenCaptureButton = document.getElementById('startScreenCaptureButton');
+    const screenCaptureSelect = document.getElementById('screenCaptureSelect');
+    startScreenCaptureButton.addEventListener('click', () => {
+      const selectedId = screenCaptureSelect.value;
+      const videoElement = videoElements[selectedId];
+      if (!videoElement) {
+        alert(`指定された画面キャプチャ(${selectedId})が見つかりません`);
+        return;
+      }
+      navigator.mediaDevices.getDisplayMedia({ video: true })
+        .then(stream => {
+          videoElement.srcObject = stream;
+        })
+        .catch(err => {
+          console.error(`画面キャプチャ${selectedId}の取得に失敗しました:`, err);
+        });
+    });
+
+    const startCameraButton = document.getElementById('startCameraButton');
+    startCameraButton.addEventListener('click', () => {
+      const videoElement = document.getElementById('cameraVideo');
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          videoElement.srcObject = stream;
+        })
+        .catch(err => {
+          console.error("カメラの起動に失敗しました:", err);
+        });
+    });
+
+    const menuToggle = document.getElementById('menuToggle');
+    const menuPanel = document.getElementById('menuPanel');
+    menuToggle.addEventListener('click', () => {
+      menuPanel.style.display = menuPanel.style.display === 'none' ? 'block' : 'none';
+    });
+
+    function goHome() {
+      alert("ホームに戻ります（ここにリンク処理などを追加可能）");
+    }
+    function toggleFullscreen() {
+      const container = document.querySelector('.container');
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else if (container.requestFullscreen) {
+        container.requestFullscreen();
+      }
+    }
+
+    document.getElementById('openLiveWindowBtn').addEventListener('click', () => {
+      if (liveWindow && !liveWindow.closed) {
+        liveWindow.focus();
+        alert(`現在のLIVE操作パネルのパスワード: ${livePassword}`);
+        return;
+      }
+
+      liveWindow = window.open('', 'livePanel', 'width=350,height=400,left=100,top=100,resizable=yes');
+      if (!liveWindow) {
+        alert('ポップアップブロックを解除してください。');
+        return;
+      }
+
+      livePassword = generatePassword();
+      alert(`LIVE操作パネルのパスワード: ${livePassword}`);
+
+      liveAuthorized = false;
+
+      liveWindow.document.title = "LIVE操作パネル";
+
+      liveWindow.document.body.style.backgroundColor = 'black';
+      liveWindow.document.body.style.color = 'white';
+      liveWindow.document.body.style.fontFamily = 'sans-serif';
+      liveWindow.document.body.style.margin = '10px';
+
+      liveWindow.document.body.innerHTML = `
+        <h3 style="text-align:center;">🎬 LIVE操作パネル</h3>
+        <div id="passwordArea" style="text-align:center; margin-top: 30px;">
+          <p>パスワードを入力してください:</p>
+          <input type="password" id="passwordInput" style="font-size:16px; padding:6px; width:70%;" />
+          <button id="passwordSubmit" style="font-size:16px; padding:6px 12px; margin-left:10px; cursor:pointer;">送信</button>
+          <p id="passwordMsg" style="color: red; margin-top: 10px;"></p>
+        </div>
+        <div id="liveControlArea" style="display:none; margin-top:20px;">
+          <div id="liveButtons" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px;">
+            <button data-id="1" disabled style="padding:6px 12px;cursor:not-allowed;">出力を1に切替</button>
+            <button data-id="2" disabled style="padding:6px 12px;cursor:not-allowed;">出力を2に切替</button>
+            <button data-id="3" disabled style="padding:6px 12px;cursor:not-allowed;">出力を3に切替</button>
+            <button data-id="4" disabled style="padding:6px 12px;cursor:not-allowed;">出力を4に切替</button>
+            <button data-id="5" disabled style="padding:6px 12px;cursor:not-allowed;">出力を5に切替</button>
+            <button data-id="6" disabled style="padding:6px 12px;cursor:not-allowed;">出力を6に切替</button>
+            <button data-id="7" disabled style="padding:6px 12px;cursor:not-allowed;">出力を7に切替</button>
+            <button data-id="camera" disabled style="padding:6px 12px;cursor:not-allowed;">カメラに切替</button>
+          </div>
+          <button id="closeLiveBtn" style="background-color:darkred;color:white;padding:6px 12px;border:none;border-radius:5px;cursor:pointer;">閉じる</button>
+        </div>
+      `;
+
+      const passwordInput = liveWindow.document.getElementById('passwordInput');
+      const passwordSubmit = liveWindow.document.getElementById('passwordSubmit');
+      const passwordMsg = liveWindow.document.getElementById('passwordMsg');
+      const liveControlArea = liveWindow.document.getElementById('liveControlArea');
+      const liveButtons = liveWindow.document.querySelectorAll('#liveButtons button');
+      const closeLiveBtn = liveWindow.document.getElementById('closeLiveBtn');
+
+      passwordSubmit.addEventListener('click', () => {
+        const val = passwordInput.value;
+        if (val === livePassword) {
+          liveAuthorized = true;
+          passwordMsg.textContent = '';
+          liveWindow.document.getElementById('passwordArea').style.display = 'none';
+          liveControlArea.style.display = 'block';
+          liveButtons.forEach(btn => {
+            btn.disabled = false;
+            btn.style.cursor = 'pointer';
+          });
+        } else {
+          passwordMsg.textContent = 'パスワードが違います。';
+        }
+      });
+
+      liveButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!liveAuthorized) return;
+          const id = btn.getAttribute('data-id');
+          window.postMessage({ type: 'switchSource', id }, '*');
+        });
+      });
+
+      closeLiveBtn.addEventListener('click', () => {
+        liveWindow.close();
+        liveWindow = null;
+      });
+
+      liveWindow.focus();
+    });
+
+    // メイン画面でメッセージを受けて切り替え
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (!data) return;
+      if (data.type === 'switchSource') {
+        switchSource(data.id, true);
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      const key = event.key;
+      if (key.toLowerCase() === 'q') {
+        const container = document.querySelector('.container');
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        } else if (container.requestFullscreen) {
+          container.requestFullscreen();
+        }
+      }
+      if (/^[1-8]$/.test(key)) {
+        const index = parseInt(key, 10);
+        if (index === 8) {
+          switchSource('camera');
+        } else {
+          switchSource(index);
+        }
+      }
+      if (key.toLowerCase() === 'w') {
+        const switchView = document.querySelector("#switchVideo1");
+        switchView.requestFullscreen();
+      }
+    });
+  </script>
+</body>
+</html>
