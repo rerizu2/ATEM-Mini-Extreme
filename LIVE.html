@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>画面キャプチャ＋ドラッグ＋埋め込み（別ウィンドウ操作可）</title>
+  <style>
+    html, body { margin:0; padding:0; width:100%; height:100%; background:#0b1220; color:#fff; font-family:Inter, Noto Sans JP, sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    #container { position: relative; display: inline-block; background: #000; border-radius: 10px; overflow: hidden; width: 80vw; height: 60vh; }
+    video, canvas { width:100%; height:100%; display:block; object-fit:cover; }
+    .draggable { position:absolute; top:20px; left:20px; width:120px; cursor:move; }
+    iframe.embed { position:absolute; bottom:20px; right:20px; width:300px; height:200px; border:none; background:#fff; display:none; }
+    button, input[type="text"], input[type="file"] { font-size:14px; border-radius:8px; padding:8px; border:1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); color:inherit; }
+    #controls { margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <video id="screenVideo" autoplay playsinline style="display:none;"></video>
+    <canvas id="captureCanvas"></canvas>
+    <img id="overlayImage" class="draggable" src="https://via.placeholder.com/120x120.png?text=MoveMe" alt="overlay" />
+    <iframe id="overlayEmbed" class="embed"></iframe>
+  </div>
+
+  <div id="controls">
+    <button id="captureBtn">画面キャプチャ開始</button>
+    <button id="selectImageBtn">画像を選択</button>
+    <input type="file" id="imageInput" accept="image/*" style="display:none;" />
+    <input type="text" id="embedInput" placeholder="埋め込みURLを入力" />
+    <button id="embedBtn">埋め込み表示</button>
+    <button id="openChildWindowBtn">別ウィンドウコントロール</button>
+  </div>
+
+  <script>
+    const video = document.getElementById("screenVideo");
+    const canvas = document.getElementById("captureCanvas");
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('container');
+    const overlayImage = document.getElementById('overlayImage');
+    const overlayEmbed = document.getElementById('overlayEmbed');
+    let childWindow = null;
+
+    function resizeCanvas() {
+      canvas.width = container.clientWidth * devicePixelRatio;
+      canvas.height = container.clientHeight * devicePixelRatio;
+      canvas.style.width = container.clientWidth + 'px';
+      canvas.style.height = container.clientHeight + 'px';
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    document.getElementById('captureBtn').addEventListener('click', async () => {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({video:true});
+        video.srcObject = stream;
+        video.style.display = 'block';
+        video.play();
+        drawLoop();
+      } catch(e){ alert('キャプチャを開始できません: '+e.message); }
+    });
+
+    function drawLoop(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      if(video.videoWidth){
+        const ratio = Math.min(canvas.width/video.videoWidth, canvas.height/video.videoHeight);
+        const dw = video.videoWidth*ratio; const dh = video.videoHeight*ratio;
+        const dx = (canvas.width - dw)/2; const dy = (canvas.height - dh)/2;
+        ctx.drawImage(video,0,0,video.videoWidth,video.videoHeight, dx,dy,dw,dh);
+        const imgX = parseInt(overlayImage.style.left || 20);
+        const imgY = parseInt(overlayImage.style.top || 20);
+        const imgW = overlayImage.offsetWidth;
+        const imgH = overlayImage.offsetHeight;
+        ctx.drawImage(overlayImage, imgX, imgY, imgW, imgH);
+      }
+      if(childWindow && !childWindow.closed){
+        childWindow.canvas.width = childWindow.innerWidth;
+        childWindow.canvas.height = childWindow.innerHeight;
+        childWindow.canvasCtx.clearRect(0,0,childWindow.canvas.width,childWindow.canvas.height);
+        childWindow.canvasCtx.drawImage(canvas,0,0,childWindow.canvas.width,childWindow.canvas.height);
+      }
+      requestAnimationFrame(drawLoop);
+    }
+
+    document.getElementById('selectImageBtn').addEventListener('click', ()=>{ document.getElementById('imageInput').click(); });
+    document.getElementById('imageInput').addEventListener('change', (e)=>{ const file = e.target.files[0]; if(file){ overlayImage.src = URL.createObjectURL(file); }});
+
+    document.getElementById('embedBtn').addEventListener('click', ()=>{ const url = document.getElementById('embedInput').value.trim(); if(url){ overlayEmbed.src = url; overlayEmbed.style.display='block'; }});
+
+    let dragging=false, offsetX=0, offsetY=0;
+    overlayImage.addEventListener('mousedown', e=>{ dragging=true; offsetX=e.clientX-overlayImage.offsetLeft; offsetY=e.clientY-overlayImage.offsetTop; });
+    document.addEventListener('mousemove', e=>{ if(dragging){ let newX = e.clientX - offsetX; let newY = e.clientY - offsetY; newX = Math.max(0, Math.min(newX, container.clientWidth - overlayImage.offsetWidth)); newY = Math.max(0, Math.min(newY, container.clientHeight - overlayImage.offsetHeight)); overlayImage.style.left = newX+'px'; overlayImage.style.top = newY+'px'; }});
+    document.addEventListener('mouseup', ()=>{ dragging=false; });
+
+    // 全画面表示(Qキー)
+    document.addEventListener('keydown', (e) => {
+      if(e.key.toLowerCase() === 'q'){
+        if(container.requestFullscreen){ container.requestFullscreen(); }
+        else if(container.webkitRequestFullscreen){ container.webkitRequestFullscreen(); }
+        else if(container.msRequestFullscreen){ container.msRequestFullscreen(); }
+      }
+    });
+
+    // 別ウィンドウコントロール
+    document.getElementById('openChildWindowBtn').addEventListener('click', ()=>{
+      if(!childWindow || childWindow.closed){
+        childWindow = window.open('', '', 'width=400,height=300');
+        childWindow.document.write('<!DOCTYPE html><html><head><title>コントロール</title></head><body style="background:#222;color:#fff;font-family:sans-serif;"><div id="controls"></div></body></html>');
+        const controlsDiv = childWindow.document.getElementById('controls');
+
+        const captureBtn = childWindow.document.createElement('button');
+        captureBtn.innerText = '画面キャプチャ開始';
+        captureBtn.onclick = () => document.getElementById('captureBtn').click();
+        controlsDiv.appendChild(captureBtn);
+
+        const selectBtn = childWindow.document.createElement('button');
+        selectBtn.innerText = '画像選択';
+        selectBtn.onclick = () => document.getElementById('selectImageBtn').click();
+        controlsDiv.appendChild(selectBtn);
+
+        const embedInput = childWindow.document.createElement('input');
+        embedInput.type='text'; embedInput.placeholder='埋め込みURL';
+        const embedBtn = childWindow.document.createElement('button');
+        embedBtn.innerText='埋め込み表示';
+        embedBtn.onclick = ()=>{ document.getElementById('embedInput').value = embedInput.value; document.getElementById('embedBtn').click(); };
+        controlsDiv.appendChild(embedInput);
+        controlsDiv.appendChild(embedBtn);
+
+        const fullBtn = childWindow.document.createElement('button');
+        fullBtn.innerText='全画面表示';
+        fullBtn.onclick = ()=>{ document.dispatchEvent(new KeyboardEvent('keydown',{key:'q'})); };
+        controlsDiv.appendChild(fullBtn);
+      }
+    });
+  </script>
+</body>
+</html>
