@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ATEM Mini Extreme ISO【統合アニメ対応版】</title>
+<style>
+body {
+  display:flex; justify-content:center; align-items:center; flex-direction:column;
+  height:100vh; margin:0; background:black; color:white;
+  font-family:sans-serif; overflow:hidden;
+}
+h1 { margin-top:10px; }
+.container {
+  display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;
+  width:80vw; height:80vh; border:2px solid white; position:relative;
+}
+.cell { border:1px solid gray; position:relative; overflow:hidden; }
+video { width:100%; height:100%; object-fit:cover; position:absolute; top:0; left:0; }
+.label {
+  position:absolute; top:5px; left:5px; color:white; font-size:20px;
+  background:rgba(0,0,0,0.5); padding:5px; border-radius:5px; z-index:2;
+}
+.horizontal-line, .vertical-line { position:absolute; background:white; z-index:2; }
+.horizontal-line { top:50%; left:0; width:100%; height:2px; }
+.vertical-line { top:0; left:50%; width:2px; height:100%; }
+.split-area { position:absolute; width:50%; height:50%; overflow:hidden; }
+.split-area.top-left { top:0; left:0; }
+.split-area.bottom-left { bottom:0; left:0; }
+.split-area.top-right { top:0; right:0; }
+.split-area.bottom-right { bottom:0; right:0; }
+.button-group {
+  position:absolute; bottom:5px; left:5px; z-index:2;
+  display:flex; gap:5px;
+}
+.button-group button {
+  padding:4px 8px; font-size:14px; cursor:pointer; transition:transform 0.2s;
+}
+.button-group button:hover { transform:scale(1.1); background:#444; }
+
+/* アニメーション定義 */
+@keyframes fadeEffect {0%{opacity:0;}100%{opacity:1;}}
+@keyframes zoomEffect {0%{transform:scale(0.8);opacity:0;}100%{transform:scale(1);opacity:1;}}
+@keyframes slideEffect {0%{transform:translateX(-100%);opacity:0;}100%{transform:translateX(0);opacity:1;}}
+@keyframes rotateEffect {0%{transform:rotate(-180deg);opacity:0;}100%{transform:rotate(0);opacity:1;}}
+</style>
+</head>
+
+<body>
+<h1>デバイス接続</h1>
+<select id="screenCaptureSelect">
+  <option value="1">画面1</option>
+  <option value="2">画面2</option>
+  <option value="3">画面3</option>
+  <option value="4">画面4</option>
+  <option value="5">画面5</option>
+  <option value="6">画面6</option>
+  <option value="7">画面7</option>
+</select>
+<button id="startScreenCaptureButton">画面キャプチャ</button>
+<button id="startCameraButton">カメラ</button>
+<button id="openLiveWindowBtn">🎬 LIVE操作（別ウィンドウ）</button>
+
+<div class="container">
+  <div class="cell"><div class="label">出力</div><video id="switchVideo1" autoplay playsinline></video></div>
+
+  <!-- 右上：画面3 -->
+  <div class="cell">
+    <div class="label">画面3</div>
+    <div class="horizontal-line"></div><div class="vertical-line"></div>
+    <div class="split-area top-left"><video id="captureVideo1" autoplay playsinline></video></div>
+    <div class="split-area bottom-left"><video id="captureVideo2" autoplay playsinline></video></div>
+    <div class="split-area top-right"><video id="captureVideo3" autoplay playsinline></video></div>
+    <div class="split-area bottom-right"><video id="captureVideo4" autoplay playsinline></video></div>
+  </div>
+
+  <!-- 左下：画面4 -->
+  <div class="cell">
+    <div class="label">画面4</div>
+    <div class="horizontal-line"></div><div class="vertical-line"></div>
+    <div class="split-area top-left"><video id="captureVideo5" autoplay playsinline></video></div>
+    <div class="split-area bottom-left"><video id="captureVideo6" autoplay playsinline></video></div>
+    <div class="split-area top-right"><video id="captureVideo7" autoplay playsinline></video></div>
+    <div class="split-area bottom-right"><video id="cameraVideo" autoplay playsinline></video></div>
+    <div class="button-group">
+      <button onclick="switchSource(5)">5</button>
+      <button onclick="switchSource(6)">6</button>
+      <button onclick="switchSource(7)">7</button>
+      <button onclick="switchSource('camera')">8</button>
+    </div>
+  </div>
+
+  <div class="cell"><div class="label">予備</div><video id="previewVideo" autoplay playsinline muted></video></div>
+</div>
+
+<script>
+const videoElements = {
+  1: captureVideo1, 2: captureVideo2, 3: captureVideo3, 4: captureVideo4,
+  5: captureVideo5, 6: captureVideo6, 7: captureVideo7, camera: cameraVideo
+};
+const switchVideo = document.getElementById("switchVideo1");
+const previewVideo = document.getElementById("previewVideo");
+let liveWindow = null;
+let liveAnimType = 'fadeEffect';
+let liveAnimSpeed = '1s';
+
+// アニメーション再生関数（左上のみ）
+function playAnim(el, type, speed) {
+  el.style.animation = 'none';
+  void el.offsetWidth;
+  el.style.animation = `${type} ${speed} ease`;
+}
+
+// 出力切替
+function switchSource(id) {
+  const srcVideo = videoElements[id];
+  if (!srcVideo || !srcVideo.srcObject) return;
+
+  // メイン画面切替
+  switchVideo.srcObject = srcVideo.srcObject;
+  previewVideo.srcObject = srcVideo.srcObject;
+  playAnim(switchVideo, liveAnimType, liveAnimSpeed);
+
+  if (liveWindow && !liveWindow.closed) {
+    // 左上（アニメーション付き）
+    const liveLeftTop = liveWindow.document.getElementById("liveCaptureVideo1");
+    if (liveLeftTop) {
+      liveLeftTop.srcObject = srcVideo.srcObject;
+      playAnim(liveLeftTop, liveAnimType, liveAnimSpeed);
+    }
+
+    // 右上 画面3 4分割（アニメなし）
+    ['liveRU1','liveRU2','liveRU3','liveRU4'].forEach((liveId,i)=>{
+      const mainId = ['captureVideo1','captureVideo2','captureVideo3','captureVideo4'][i];
+      const mainVid = document.getElementById(mainId);
+      const liveVid = liveWindow.document.getElementById(liveId);
+      if (mainVid && mainVid.srcObject) liveVid.srcObject = mainVid.srcObject;
+    });
+
+    // 左下 画面4 4分割（アニメなし）
+    ['liveLD1','liveLD2','liveLD3','liveLD4'].forEach((liveId,i)=>{
+      const mainId = ['captureVideo5','captureVideo6','captureVideo7','cameraVideo'][i];
+      const mainVid = document.getElementById(mainId);
+      const liveVid = liveWindow.document.getElementById(liveId);
+      if (mainVid && mainVid.srcObject) liveVid.srcObject = mainVid.srcObject;
+    });
+
+    // 右下（予備）アニメなし
+    const liveRD = liveWindow.document.getElementById("liveRD1");
+    if (previewVideo.srcObject) liveRD.srcObject = previewVideo.srcObject;
+  }
+}
+
+// キャプチャ・カメラ起動
+startScreenCaptureButton.onclick = () => {
+  const id = screenCaptureSelect.value;
+  const v = videoElements[id];
+  if (v)
+    navigator.mediaDevices.getDisplayMedia({video:true})
+    .then(s => v.srcObject = s)
+    .catch(console.error);
+};
+startCameraButton.onclick = () => {
+  navigator.mediaDevices.getUserMedia({video:true})
+  .then(s => videoElements.camera.srcObject = s)
+  .catch(console.error);
+};
+
+// LIVEウィンドウ生成
+openLiveWindowBtn.onclick = () => {
+  liveWindow = window.open("", "livePanel", "width=1280,height=800");
+  if (!liveWindow) return alert("ポップアップを許可してください");
+
+  liveWindow.document.title = "🎬 LIVE操作パネル";
+  liveWindow.document.body.style.background = "black";
+  liveWindow.document.body.style.color = "white";
+  liveWindow.document.body.style.fontFamily = "sans-serif";
+  liveWindow.document.body.innerHTML = `
+    <h3 style="text-align:center;">🎬 LIVE操作パネル</h3>
+    <div style="text-align:center;margin:10px;">
+      ${[1,2,3,4,5,6,7,'camera'].map(i=>`<button data-id="${i}">切替${i}</button>`).join('')}
+    </div>
+    <div style="text-align:center;margin:10px;">
+      <label>アニメーション:
+        <select id="animType">
+          <option value="fadeEffect">フェード</option>
+          <option value="zoomEffect">ズーム</option>
+          <option value="slideEffect">スライド</option>
+          <option value="rotateEffect">回転</option>
+        </select>
+      </label>
+      <label>速度:
+        <select id="animSpeed">
+          <option value="0.5s">0.5秒</option>
+          <option value="1s" selected>1秒</option>
+          <option value="2s">2秒</option>
+        </select>
+      </label>
+    </div>
+
+    <div style="position:relative;width:90%;height:500px;margin:20px auto;border:3px solid white;">
+      <!-- 左上：メイン出力（アニメ有り） -->
+      <div style="position:absolute;top:0;left:0;width:50%;height:50%;border:1px solid white;">
+        <video id="liveCaptureVideo1" autoplay muted style="width:100%;height:100%;object-fit:cover;"></video>
+      </div>
+
+      <!-- 右上：画面3 4分割（アニメなし） -->
+      <div style="position:absolute;top:0;right:0;width:50%;height:50%;border:1px solid white;">
+        <div style="position:absolute;top:50%;left:0;width:100%;height:2px;background:white;"></div>
+        <div style="position:absolute;top:0;left:50%;width:2px;height:100%;background:white;"></div>
+        ${[1,2,3,4].map(i=>`
+          <div class="mini" style="position:absolute;${i<3?'top:0':'bottom:0'};${i%2==1?'left:0':'right:0'};width:50%;height:50%;">
+            <video id="liveRU${i}" autoplay muted style="width:100%;height:100%;object-fit:cover;"></video>
+          </div>`).join('')}
+      </div>
+
+      <!-- 左下：画面4 4分割（アニメなし） -->
+      <div style="position:absolute;bottom:0;left:0;width:50%;height:50%;border:1px solid white;">
+        <div style="position:absolute;top:50%;left:0;width:100%;height:2px;background:white;"></div>
+        <div style="position:absolute;top:0;left:50%;width:2px;height:100%;background:white;"></div>
+        ${[1,2,3,4].map(i=>`
+          <div class="mini" style="position:absolute;${i<3?'top:0':'bottom:0'};${i%2==1?'left:0':'right:0'};width:50%;height:50%;">
+            <video id="liveLD${i}" autoplay muted style="width:100%;height:100%;object-fit:cover;"></video>
+          </div>`).join('')}
+      </div>
+
+      <!-- 右下：予備（アニメなし） -->
+      <div style="position:absolute;bottom:0;right:0;width:50%;height:50%;border:1px solid white;">
+        <video id="liveRD1" autoplay muted style="width:100%;height:100%;object-fit:cover;"></video>
+      </div>
+    </div>
+
+    <style>
+      @keyframes fadeEffect {0%{opacity:0;}100%{opacity:1;}}
+      @keyframes zoomEffect {0%{transform:scale(0.8);opacity:0;}100%{transform:scale(1);opacity:1;}}
+      @keyframes slideEffect {0%{transform:translateX(-100%);opacity:0;}100%{transform:translateX(0);opacity:1;}}
+      @keyframes rotateEffect {0%{transform:rotate(-180deg);opacity:0;}100%{transform:rotate(0);opacity:1;}}
+    </style>
+  `;
+
+  // 設定同期
+  const typeSel = liveWindow.document.getElementById("animType");
+  const speedSel = liveWindow.document.getElementById("animSpeed");
+  typeSel.onchange = () => liveAnimType = typeSel.value;
+  speedSel.onchange = () => liveAnimSpeed = speedSel.value;
+
+  // LIVEボタン同期
+  liveWindow.document.querySelectorAll("button[data-id]").forEach(btn=>{
+    btn.onclick = () => switchSource(btn.dataset.id);
+  });
+
+  // 初期映像同期
+  const liveLeftTop = liveWindow.document.getElementById("liveCaptureVideo1");
+  if (switchVideo.srcObject) liveLeftTop.srcObject = switchVideo.srcObject;
+
+  ['captureVideo1','captureVideo2','captureVideo3','captureVideo4'].forEach((id,i)=>{
+    const mainVid = document.getElementById(id);
+    const liveVid = liveWindow.document.getElementById(`liveRU${i+1}`);
+    if (mainVid.srcObject) liveVid.srcObject = mainVid.srcObject;
+  });
+
+  ['captureVideo5','captureVideo6','captureVideo7','cameraVideo'].forEach((id,i)=>{
+    const mainVid = document.getElementById(id);
+    const liveVid = liveWindow.document.getElementById(`liveLD${i+1}`);
+    if (mainVid.srcObject) liveVid.srcObject = mainVid.srcObject;
+  });
+
+  const liveRD = liveWindow.document.getElementById("liveRD1");
+  if (previewVideo.srcObject) liveRD.srcObject = previewVideo.srcObject;
+};
+</script>
+</body>
+</html>
