@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ATEM Mini Extreme ISO【統合アニメ対応版】</title>
+<title>ATEM Mini Extreme ISO【アニメ設定別窓対応版】</title>
 <style>
 body {
   display:flex; justify-content:center; align-items:center; flex-direction:column;
@@ -61,12 +61,22 @@ video { width:100%; height:100%; object-fit:cover; position:absolute; top:0; lef
 <button id="startCameraButton">カメラ</button>
 <button id="openLiveWindowBtn">🎬 LIVE操作（別ウィンドウ）</button>
 
-<div class="container">
-  <div class="cell"><div class="label">出力</div><video id="switchVideo1" autoplay playsinline></video></div>
+<!-- 🎥 一括録画ボタン -->
+<div style="margin-top:10px;">
+  <button id="startAllRecordBtn">🎥 8画面同時録画開始</button>
+  <button id="stopAllRecordBtn" style="display:none;">⏹ 停止＆保存</button>
+</div>
 
-  <!-- 右上：画面3 -->
+<div class="container" id="mainContainer">
+  <!-- 🔹左上 出力 -->
+  <div class="cell" id="outputCell">
+    <div class="label">出力</div>
+    <video id="switchVideo1" autoplay playsinline></video>
+  </div>
+
+  <!-- 🔹右上 -->
   <div class="cell">
-    <div class="label">画面3</div>
+    <div class="label">画面3（右上）</div>
     <div class="horizontal-line"></div><div class="vertical-line"></div>
     <div class="split-area top-left"><video id="captureVideo1" autoplay playsinline></video></div>
     <div class="split-area bottom-left"><video id="captureVideo2" autoplay playsinline></video></div>
@@ -74,9 +84,9 @@ video { width:100%; height:100%; object-fit:cover; position:absolute; top:0; lef
     <div class="split-area bottom-right"><video id="captureVideo4" autoplay playsinline></video></div>
   </div>
 
-  <!-- 左下：画面4 -->
+  <!-- 🔹左下 -->
   <div class="cell">
-    <div class="label">画面4</div>
+    <div class="label">画面4（左下）</div>
     <div class="horizontal-line"></div><div class="vertical-line"></div>
     <div class="split-area top-left"><video id="captureVideo5" autoplay playsinline></video></div>
     <div class="split-area bottom-left"><video id="captureVideo6" autoplay playsinline></video></div>
@@ -90,6 +100,7 @@ video { width:100%; height:100%; object-fit:cover; position:absolute; top:0; lef
     </div>
   </div>
 
+  <!-- 🔹右下 -->
   <div class="cell"><div class="label">予備</div><video id="previewVideo" autoplay playsinline muted></video></div>
 </div>
 
@@ -104,11 +115,34 @@ let liveWindow = null;
 let liveAnimType = 'fadeEffect';
 let liveAnimSpeed = '1s';
 
-// アニメーション再生関数（左上のみ）
+// アニメーション適用
 function playAnim(el, type, speed) {
   el.style.animation = 'none';
   void el.offsetWidth;
   el.style.animation = `${type} ${speed} ease`;
+}
+
+// 同期関数
+function syncAll() {
+  if (!liveWindow || liveWindow.closed) return;
+  const lt = liveWindow.document.getElementById("liveCaptureVideo1");
+  const ltWrap = liveWindow.document.getElementById("liveLTWrapper");
+  if (lt && switchVideo.srcObject) {
+    lt.srcObject = switchVideo.srcObject;
+    if (ltWrap) playAnim(ltWrap, liveAnimType, liveAnimSpeed);
+  }
+  ['captureVideo1','captureVideo2','captureVideo3','captureVideo4'].forEach((id,i)=>{
+    const v=document.getElementById(id);
+    const lv=liveWindow.document.getElementById(`liveRU${i+1}`);
+    if(v&&v.srcObject)lv.srcObject=v.srcObject;
+  });
+  ['captureVideo5','captureVideo6','captureVideo7','cameraVideo'].forEach((id,i)=>{
+    const v=document.getElementById(id);
+    const lv=liveWindow.document.getElementById(`liveLD${i+1}`);
+    if(v&&v.srcObject)lv.srcObject=v.srcObject;
+  });
+  const rb = liveWindow.document.getElementById("liveRD1");
+  if (rb && previewVideo.srcObject) rb.srcObject = previewVideo.srcObject;
 }
 
 // 出力切替
@@ -116,53 +150,32 @@ function switchSource(id) {
   const srcVideo = videoElements[id];
   if (!srcVideo || !srcVideo.srcObject) return;
 
-  // メイン画面切替
   switchVideo.srcObject = srcVideo.srcObject;
   previewVideo.srcObject = srcVideo.srcObject;
   playAnim(switchVideo, liveAnimType, liveAnimSpeed);
 
   if (liveWindow && !liveWindow.closed) {
-    // 左上（アニメーション付き）
     const liveLeftTop = liveWindow.document.getElementById("liveCaptureVideo1");
-    if (liveLeftTop) {
-      liveLeftTop.srcObject = srcVideo.srcObject;
-      playAnim(liveLeftTop, liveAnimType, liveAnimSpeed);
-    }
-
-    // 右上 画面3 4分割（アニメなし）
-    ['liveRU1','liveRU2','liveRU3','liveRU4'].forEach((liveId,i)=>{
-      const mainId = ['captureVideo1','captureVideo2','captureVideo3','captureVideo4'][i];
-      const mainVid = document.getElementById(mainId);
-      const liveVid = liveWindow.document.getElementById(liveId);
-      if (mainVid && mainVid.srcObject) liveVid.srcObject = mainVid.srcObject;
-    });
-
-    // 左下 画面4 4分割（アニメなし）
-    ['liveLD1','liveLD2','liveLD3','liveLD4'].forEach((liveId,i)=>{
-      const mainId = ['captureVideo5','captureVideo6','captureVideo7','cameraVideo'][i];
-      const mainVid = document.getElementById(mainId);
-      const liveVid = liveWindow.document.getElementById(liveId);
-      if (mainVid && mainVid.srcObject) liveVid.srcObject = mainVid.srcObject;
-    });
-
-    // 右下（予備）アニメなし
-    const liveRD = liveWindow.document.getElementById("liveRD1");
-    if (previewVideo.srcObject) liveRD.srcObject = previewVideo.srcObject;
+    const liveWrap = liveWindow.document.getElementById("liveLTWrapper");
+    if (liveLeftTop) liveLeftTop.srcObject = srcVideo.srcObject;
+    if (liveWrap) playAnim(liveWrap, liveAnimType, liveAnimSpeed);
   }
 }
 
-// キャプチャ・カメラ起動
+// キャプチャ開始
 startScreenCaptureButton.onclick = () => {
   const id = screenCaptureSelect.value;
   const v = videoElements[id];
-  if (v)
-    navigator.mediaDevices.getDisplayMedia({video:true})
-    .then(s => v.srcObject = s)
-    .catch(console.error);
+  if (!v) return;
+  navigator.mediaDevices.getDisplayMedia({video:true})
+  .then(s => { v.srcObject = s; syncAll(); })
+  .catch(console.error);
 };
+
+// カメラ起動
 startCameraButton.onclick = () => {
   navigator.mediaDevices.getUserMedia({video:true})
-  .then(s => videoElements.camera.srcObject = s)
+  .then(s => { videoElements.camera.srcObject = s; syncAll(); })
   .catch(console.error);
 };
 
@@ -174,16 +187,17 @@ openLiveWindowBtn.onclick = () => {
   liveWindow.document.title = "🎬 LIVE操作パネル";
   liveWindow.document.body.style.background = "black";
   liveWindow.document.body.style.color = "white";
-  liveWindow.document.body.style.fontFamily = "sans-serif";
   liveWindow.document.body.innerHTML = `
     <h3 style="text-align:center;">🎬 LIVE操作パネル</h3>
+
     <div style="text-align:center;margin:10px;">
       ${[1,2,3,4,5,6,7,'camera'].map(i=>`<button data-id="${i}">切替${i}</button>`).join('')}
     </div>
+
     <div style="text-align:center;margin:10px;">
       <label>アニメーション:
         <select id="animType">
-          <option value="fadeEffect">フェード</option>
+          <option value="fadeEffect" selected>フェード</option>
           <option value="zoomEffect">ズーム</option>
           <option value="slideEffect">スライド</option>
           <option value="rotateEffect">回転</option>
@@ -198,75 +212,109 @@ openLiveWindowBtn.onclick = () => {
       </label>
     </div>
 
-    <div style="position:relative;width:90%;height:500px;margin:20px auto;border:3px solid white;">
-      <!-- 左上：メイン出力（アニメ有り） -->
-      <div style="position:absolute;top:0;left:0;width:50%;height:50%;border:1px solid white;">
+    <div id="liveContainer" style="position:relative;width:90%;height:500px;margin:20px auto;border:3px solid white;">
+      <div id="liveLTWrapper" style="position:absolute;top:0;left:0;width:50%;height:50%;border:1px solid white;">
         <video id="liveCaptureVideo1" autoplay muted style="width:100%;height:100%;object-fit:cover;"></video>
       </div>
 
-      <!-- 右上：画面3 4分割（アニメなし） -->
       <div style="position:absolute;top:0;right:0;width:50%;height:50%;border:1px solid white;">
-        <div style="position:absolute;top:50%;left:0;width:100%;height:2px;background:white;"></div>
-        <div style="position:absolute;top:0;left:50%;width:2px;height:100%;background:white;"></div>
         ${[1,2,3,4].map(i=>`
-          <div class="mini" style="position:absolute;${i<3?'top:0':'bottom:0'};${i%2==1?'left:0':'right:0'};width:50%;height:50%;">
-            <video id="liveRU${i}" autoplay muted style="width:100%;height:100%;object-fit:cover;"></video>
-          </div>`).join('')}
+          <video id="liveRU${i}" autoplay muted style="width:50%;height:50%;object-fit:cover;position:absolute;
+          ${i<3?'top:0;':'bottom:0;'}${i%2==1?'left:0;':'right:0;'}"></video>`).join('')}
       </div>
 
-      <!-- 左下：画面4 4分割（アニメなし） -->
       <div style="position:absolute;bottom:0;left:0;width:50%;height:50%;border:1px solid white;">
-        <div style="position:absolute;top:50%;left:0;width:100%;height:2px;background:white;"></div>
-        <div style="position:absolute;top:0;left:50%;width:2px;height:100%;background:white;"></div>
         ${[1,2,3,4].map(i=>`
-          <div class="mini" style="position:absolute;${i<3?'top:0':'bottom:0'};${i%2==1?'left:0':'right:0'};width:50%;height:50%;">
-            <video id="liveLD${i}" autoplay muted style="width:100%;height:100%;object-fit:cover;"></video>
-          </div>`).join('')}
+          <video id="liveLD${i}" autoplay muted style="width:50%;height:50%;object-fit:cover;position:absolute;
+          ${i<3?'top:0;':'bottom:0;'}${i%2==1?'left:0;':'right:0;'}"></video>`).join('')}
       </div>
 
-      <!-- 右下：予備（アニメなし） -->
       <div style="position:absolute;bottom:0;right:0;width:50%;height:50%;border:1px solid white;">
         <video id="liveRD1" autoplay muted style="width:100%;height:100%;object-fit:cover;"></video>
       </div>
-    </div>
+    </div>`;
 
-    <style>
-      @keyframes fadeEffect {0%{opacity:0;}100%{opacity:1;}}
-      @keyframes zoomEffect {0%{transform:scale(0.8);opacity:0;}100%{transform:scale(1);opacity:1;}}
-      @keyframes slideEffect {0%{transform:translateX(-100%);opacity:0;}100%{transform:translateX(0);opacity:1;}}
-      @keyframes rotateEffect {0%{transform:rotate(-180deg);opacity:0;}100%{transform:rotate(0);opacity:1;}}
-    </style>
-  `;
-
-  // 設定同期
   const typeSel = liveWindow.document.getElementById("animType");
   const speedSel = liveWindow.document.getElementById("animSpeed");
   typeSel.onchange = () => liveAnimType = typeSel.value;
   speedSel.onchange = () => liveAnimSpeed = speedSel.value;
 
-  // LIVEボタン同期
   liveWindow.document.querySelectorAll("button[data-id]").forEach(btn=>{
     btn.onclick = () => switchSource(btn.dataset.id);
   });
 
-  // 初期映像同期
-  const liveLeftTop = liveWindow.document.getElementById("liveCaptureVideo1");
-  if (switchVideo.srcObject) liveLeftTop.srcObject = switchVideo.srcObject;
+  syncAll();
+};
 
-  ['captureVideo1','captureVideo2','captureVideo3','captureVideo4'].forEach((id,i)=>{
-    const mainVid = document.getElementById(id);
-    const liveVid = liveWindow.document.getElementById(`liveRU${i+1}`);
-    if (mainVid.srcObject) liveVid.srcObject = mainVid.srcObject;
+// Qキーで全画面（メイン全体）
+document.addEventListener("keydown", e=>{
+  if(e.key==="q"||e.key==="Q"){
+    const container=document.getElementById("mainContainer");
+    if(!document.fullscreenElement) container.requestFullscreen();
+    else document.exitFullscreen();
+  }
+});
+
+// Wキーで出力画面のみ全画面
+document.addEventListener("keydown", e=>{
+  if(e.key==="w"||e.key==="W"){
+    const outputCell=document.getElementById("outputCell");
+    if(!document.fullscreenElement) outputCell.requestFullscreen();
+    else document.exitFullscreen();
+  }
+});
+
+// 🎥 一括録画機能 =========================================
+const recordTargets = [
+  { id: 'captureVideo1', name: '画面3_左上' },
+  { id: 'captureVideo2', name: '画面3_左下' },
+  { id: 'captureVideo3', name: '画面3_右上' },
+  { id: 'captureVideo4', name: '画面3_右下' },
+  { id: 'captureVideo5', name: '画面4_左上' },
+  { id: 'captureVideo6', name: '画面4_左下' },
+  { id: 'captureVideo7', name: '画面4_右上' },
+  { id: 'cameraVideo',  name: '画面4_右下（カメラ）' }
+];
+
+let recorders = [];
+let recordedChunks = [];
+
+document.getElementById("startAllRecordBtn").onclick = () => {
+  recorders = [];
+  recordedChunks = [];
+
+  recordTargets.forEach((target) => {
+    const video = document.getElementById(target.id);
+    if (!video || !video.srcObject) return;
+
+    const stream = video.srcObject;
+    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
+    const chunks = [];
+    recorder.ondataavailable = e => e.data.size > 0 && chunks.push(e.data);
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${target.name}_${new Date().toISOString().replace(/[:.]/g,'-')}.webm`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+    recorder.start();
+    recorders.push(recorder);
+    recordedChunks.push(chunks);
   });
 
-  ['captureVideo5','captureVideo6','captureVideo7','cameraVideo'].forEach((id,i)=>{
-    const mainVid = document.getElementById(id);
-    const liveVid = liveWindow.document.getElementById(`liveLD${i+1}`);
-    if (mainVid.srcObject) liveVid.srcObject = mainVid.srcObject;
-  });
+  alert("🎥 8画面の録画を開始しました！");
+  document.getElementById("startAllRecordBtn").style.display = "none";
+  document.getElementById("stopAllRecordBtn").style.display = "inline-block";
+};
 
-  const liveRD = liveWindow.document.getElementById("liveRD1");
-  if (previewVideo.srcObject) liveRD.srcObject = previewVideo.srcObject;
+document.getElementById("stopAllRecordBtn").onclick = () => {
+  recorders.forEach(r => r && r.state === "recording" && r.stop());
+  alert("⏹ すべての録画を停止し、ファイルを保存しました。");
+  document.getElementById("startAllRecordBtn").style.display = "inline-block";
+  document.getElementById("stopAllRecordBtn").style.display = "none";
 };
 </script>
 </body>
